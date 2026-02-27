@@ -9,14 +9,17 @@ from fastapi.staticfiles import StaticFiles
 
 from manager.config import settings
 from manager.database import init_db, close_db
+from manager.services.worker_orchestrator import orchestrator
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
     await init_db(settings.db_path)
+    await orchestrator.start()
     yield
     # Shutdown
+    await orchestrator.stop()
     await close_db()
 
 
