@@ -1,0 +1,30 @@
+# CLAUDE.md — {{PROJECT_NAME}}
+
+## Project Overview
+{{PROJECT_DESCRIPTION}}
+
+## Tech Stack
+- Runtime: Node.js + TypeScript
+- Framework: (specified per project)
+- Testing: npm test
+
+## Coding Conventions
+- Use TypeScript strict mode
+- Prefer async/await over callbacks
+- Keep functions small and focused
+- Write meaningful commit messages
+
+## File Structure
+(auto-filled per project)
+
+## Current Task
+This worktree is working on: **{{TASK_TITLE}}**
+
+### Instructions
+{{TASK_DESCRIPTION}}
+
+## Important Notes
+- Do NOT modify files outside the scope of the current task
+- Run `npm test` before considering the task complete
+- If you encounter merge conflicts, resolve them cleanly
+- Write a brief summary of changes when done
