@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Claude Hive</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#1a1a2e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+</head>
+<body>
+    <header>
+        <h1>Claude Hive</h1>
+        <div class="header-actions">
+            <span id="worker-count" class="badge">0 workers</span>
+            <span id="cost-total" class="badge">$0.00</span>
+            <button id="btn-new-task" class="btn btn-primary">+ Task</button>
+        </div>
+    </header>
+
+    <main id="board" class="board">
+        <div class="column" data-status="pending">
+            <h2>Pending</h2>
+            <div class="card-list" data-status="pending"></div>
+        </div>
+        <div class="column" data-status="in_progress">
+            <h2>In Progress</h2>
+            <div class="card-list" data-status="in_progress"></div>
+        </div>
+        <div class="column" data-status="merging">
+            <h2>Merging</h2>
+            <div class="card-list" data-status="merging"></div>
+        </div>
+        <div class="column" data-status="testing">
+            <h2>Testing</h2>
+            <div class="card-list" data-status="testing"></div>
+        </div>
+        <div class="column" data-status="completed">
+            <h2>Completed</h2>
+            <div class="card-list" data-status="completed"></div>
+        </div>
+        <div class="column" data-status="failed">
+            <h2>Failed</h2>
+            <div class="card-list" data-status="failed"></div>
+        </div>
+    </main>
+
+    <!-- Task creation modal -->
+    <dialog id="task-dialog">
+        <form id="task-form" method="dialog">
+            <h2>New Task</h2>
+            <label>
+                Title
+                <input type="text" name="title" required placeholder="What needs to be done?">
+            </label>
+            <label>
+                Description
+                <textarea name="description" rows="4" placeholder="Detailed instructions for Claude..."></textarea>
+            </label>
+            <div class="form-row">
+                <label>
+                    Priority (0-10)
+                    <input type="number" name="priority" value="5" min="0" max="10">
+                </label>
+                <label class="checkbox-label">
+                    <input type="checkbox" name="plan_mode" checked>
+                    Plan mode
+                </label>
+            </div>
+            <div class="voice-row">
+                <button type="button" id="btn-voice" class="btn btn-secondary">🎤 Voice</button>
+                <span id="voice-status"></span>
+            </div>
+            <div class="dialog-actions">
+                <button type="button" class="btn" onclick="this.closest('dialog').close()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Create</button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Task detail modal -->
+    <dialog id="task-detail-dialog">
+        <div id="task-detail-content"></div>
+        <div class="dialog-actions">
+            <button class="btn" onclick="this.closest('dialog').close()">Close</button>
+        </div>
+    </dialog>
+
+    <script src="/js/api.js"></script>
+    <script src="/js/board.js"></script>
+    <script src="/js/task-form.js"></script>
+    <script src="/js/voice.js"></script>
+    <script src="/js/sse-client.js"></script>
+    <script src="/js/worker-monitor.js"></script>
+    <script src="/js/app.js"></script>
+</body>
+</html>
