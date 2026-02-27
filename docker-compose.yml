@@ -1,0 +1,20 @@
+services:
+  hive:
+    build: .
+    ports:
+      - "8420:8420"
+      - "5200-5210:5200-5210"  # Worker dev server ports
+    volumes:
+      - ${HIVE_PROJECT_DIR:-.}:/project
+      - hive-data:/app/.vibe-manager
+    environment:
+      - HIVE_PROJECT_DIR=/project
+      - HIVE_PROJECT_NAME=${HIVE_PROJECT_NAME:-my-project}
+      - HIVE_MAX_WORKERS=${HIVE_MAX_WORKERS:-3}
+      - HIVE_MAIN_BRANCH=${HIVE_MAIN_BRANCH:-main}
+      - HIVE_AUTO_PUSH=${HIVE_AUTO_PUSH:-false}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+    restart: unless-stopped
+
+volumes:
+  hive-data:
