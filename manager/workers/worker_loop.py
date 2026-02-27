@@ -77,6 +77,12 @@ async def update_worker_status(worker_id: int, status: str, task_id: int | None 
 
 async def worker_loop(worker_id: int, stop_event: asyncio.Event):
     """Main worker loop — runs until stop_event is set."""
+    from manager.services.git_service import ensure_repo
+    if not await ensure_repo():
+        log.error("Worker %d: project_dir is not a git repo, cannot start", worker_id)
+        await update_worker_status(worker_id, "dead")
+        return
+
     log.info("Worker %d started", worker_id)
 
     while not stop_event.is_set():

@@ -54,12 +54,17 @@ async def run_claude(
     log.info("Running Claude for task %d in %s", task_id, cwd)
     channel = f"task:{task_id}"
 
+    # Clean env to avoid nested-session detection
+    import os
+    env = {k: v for k, v in os.environ.items() if k != "CLAUDECODE"}
+
     try:
         proc = await asyncio.create_subprocess_exec(
             *cmd,
             cwd=str(cwd),
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
+            env=env,
         )
     except FileNotFoundError:
         return ClaudeResult(error=f"Claude CLI not found: {settings.claude_cli}")
