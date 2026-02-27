@@ -1,6 +1,6 @@
 FROM python:3.12-slim
 
-# Install Node.js (for npm test in worktrees) and git
+# Install Node.js (for npm test in worktrees), git, and uv
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     curl \
@@ -8,14 +8,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get install -y --no-install-recommends nodejs \
     && rm -rf /var/lib/apt/lists/*
 
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
 # Install Claude CLI
 RUN npm install -g @anthropic-ai/claude-code
 
 WORKDIR /app
 
-# Install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install Python dependencies via uv
+COPY pyproject.toml .
+RUN uv sync --no-dev --no-install-project
 
 # Copy application
 COPY manager/ manager/
@@ -27,4 +30,4 @@ EXPOSE 8420
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
     CMD curl -f http://localhost:8420/api/health || exit 1
 
-CMD ["python", "-m", "uvicorn", "manager.main:app", "--host", "0.0.0.0", "--port", "8420"]
+CMD ["uv", "run", "uvicorn", "manager.main:app", "--host", "0.0.0.0", "--port", "8420"]

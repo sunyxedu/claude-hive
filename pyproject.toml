@@ -2,7 +2,7 @@
 name = "claude-hive"
 version = "0.1.0"
 description = "Orchestrate multiple Claude Code instances working in parallel via git worktrees"
-readme = "README.md"
+readme = {text = "", content-type = "text/markdown"}
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115",
@@ -16,6 +16,9 @@ dependencies = [
 [project.scripts]
 claude-hive = "manager.main:cli"
 
+[tool.hatch.build.targets.wheel]
+packages = ["manager"]
+
 [build-system]
-requires = ["setuptools>=75"]
-build-backend = "setuptools.backends._legacy:_Backend"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
