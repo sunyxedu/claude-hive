@@ -20,9 +20,14 @@ WORKDIR /app
 COPY pyproject.toml .
 RUN uv sync --no-dev --no-install-project
 
+# Build frontend
+COPY frontend/package.json frontend/package-lock.json frontend/
+RUN cd frontend && npm ci
+COPY frontend/ frontend/
+RUN cd frontend && npm run build
+
 # Copy application
 COPY manager/ manager/
-COPY static/ static/
 COPY templates/ templates/
 
 EXPOSE 8420

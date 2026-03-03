@@ -17,6 +17,7 @@ uv.lock
 *.db-wal
 *.db-shm
 node_modules/
+static/
 .DS_Store
 *.log
 .claude/
