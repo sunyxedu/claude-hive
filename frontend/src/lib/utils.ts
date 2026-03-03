@@ -21,14 +21,14 @@ export function formatRelativeTime(dateStr: string): string {
 }
 
 const ID_COLORS = [
-  "bg-emerald-100 text-emerald-700",
-  "bg-violet-100 text-violet-700",
-  "bg-blue-100 text-blue-700",
-  "bg-amber-100 text-amber-700",
-  "bg-rose-100 text-rose-700",
-  "bg-teal-100 text-teal-700",
-  "bg-indigo-100 text-indigo-700",
-  "bg-orange-100 text-orange-700",
+  "bg-emerald-500/15 text-emerald-400",
+  "bg-violet-500/15 text-violet-400",
+  "bg-blue-500/15 text-blue-400",
+  "bg-amber-500/15 text-amber-400",
+  "bg-rose-500/15 text-rose-400",
+  "bg-teal-500/15 text-teal-400",
+  "bg-indigo-500/15 text-indigo-400",
+  "bg-orange-500/15 text-orange-400",
 ]
 
 export function getIdColor(id: number): string {

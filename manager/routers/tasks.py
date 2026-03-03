@@ -14,13 +14,13 @@ async def create_task(data: TaskCreate):
 
 
 @router.get("", response_model=list[TaskOut])
-async def list_tasks(status: str | None = None):
-    return await task_service.list_tasks(status)
+async def list_tasks(status: str | None = None, project_id: int | None = None):
+    return await task_service.list_tasks(status, project_id=project_id)
 
 
 @router.get("/board")
-async def get_board():
-    return await task_service.get_board()
+async def get_board(project_id: int | None = None):
+    return await task_service.get_board(project_id=project_id)
 
 
 @router.get("/{task_id}", response_model=TaskOut)

@@ -13,7 +13,8 @@ import type {
   SystemStats,
   BoardData,
   TaskStatus,
-  ProjectConfig,
+  ProjectOut,
+  GitHubUser,
 } from "@/types"
 import * as api from "@/lib/api"
 import { useBoardSSE } from "@/hooks/use-board-sse"
@@ -91,26 +92,48 @@ function reducer(state: BoardState, action: Action): BoardState {
 // ── Context ──
 
 interface BoardContextValue extends BoardState {
-  config: ProjectConfig | null
+  projects: ProjectOut[]
+  activeProject: ProjectOut | null
+  setActiveProject: (project: ProjectOut | null) => void
+  refreshProjects: () => Promise<void>
   refreshBoard: () => Promise<void>
   totalTasks: number
+  user: GitHubUser | null
+  refreshUser: () => Promise<void>
 }
 
 const BoardContext = createContext<BoardContextValue | null>(null)
 
 export function BoardProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState)
-  const [config, setConfig] = useState<ProjectConfig | null>(null)
+  const [projects, setProjects] = useState<ProjectOut[]>([])
+  const [activeProject, setActiveProject] = useState<ProjectOut | null>(null)
+  const [user, setUser] = useState<GitHubUser | null>(null)
+
+  const projectId = activeProject?.id ?? null
+
+  const refreshProjects = useCallback(async () => {
+    try {
+      const list = await api.listProjects()
+      setProjects(list)
+      // Auto-select first project if none active
+      if (!activeProject && list.length > 0) {
+        setActiveProject(list[0])
+      }
+    } catch {
+      // Projects endpoint may not be ready
+    }
+  }, [activeProject])
 
   const refreshBoard = useCallback(async () => {
     try {
-      const board = await api.getBoard()
+      const board = await api.getBoard(projectId)
       dispatch({ type: "SET_BOARD", board })
     } catch (err) {
       console.error("Failed to load board:", err)
       dispatch({ type: "SET_LOADING", loading: false })
     }
-  }, [])
+  }, [projectId])
 
   const refreshWorkers = useCallback(async () => {
     try {
@@ -123,27 +146,60 @@ export function BoardProvider({ children }: { children: ReactNode }) {
 
   const refreshStats = useCallback(async () => {
     try {
-      const stats = await api.getStats()
+      const stats = await api.getStats(projectId)
       dispatch({ type: "SET_STATS", stats })
     } catch {
       // Stats endpoint may not be ready
     }
+  }, [projectId])
+
+  const refreshUser = useCallback(async () => {
+    try {
+      const data = await api.getAuthMe()
+      if (data.logged_in) {
+        setUser({
+          github_username: data.github_username,
+          github_avatar: data.github_avatar,
+          logged_in: true,
+        })
+      } else {
+        setUser(null)
+      }
+    } catch {
+      setUser(null)
+    }
   }, [])
 
-  // Load config once
+  // Load projects and user on mount
   useEffect(() => {
-    api.getConfig().then(setConfig).catch(() => {})
-  }, [])
+    refreshProjects()
+    refreshUser()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // SSE real-time updates
+  // Reload board when active project changes
+  useEffect(() => {
+    dispatch({ type: "SET_LOADING", loading: true })
+    refreshBoard()
+    refreshStats()
+  }, [projectId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // SSE real-time updates — filter by project on upsert
   useBoardSSE({
-    onTaskCreated: (task) => dispatch({ type: "UPSERT_TASK", task }),
-    onTaskUpdated: (task) => dispatch({ type: "UPSERT_TASK", task }),
+    onTaskCreated: (task) => {
+      if (projectId === null || task.project_id === projectId) {
+        dispatch({ type: "UPSERT_TASK", task })
+      }
+    },
+    onTaskUpdated: (task) => {
+      if (projectId === null || task.project_id === projectId) {
+        dispatch({ type: "UPSERT_TASK", task })
+      }
+    },
     onTaskDeleted: (id) => dispatch({ type: "REMOVE_TASK", id }),
     onWorkerUpdated: () => refreshWorkers(),
   })
 
-  // Initial load + polling fallback (10s)
+  // Polling fallback (10s)
   usePolling(() => {
     refreshBoard()
     refreshWorkers()
@@ -156,7 +212,19 @@ export function BoardProvider({ children }: { children: ReactNode }) {
   )
 
   return (
-    <BoardContext.Provider value={{ ...state, config, refreshBoard, totalTasks }}>
+    <BoardContext.Provider
+      value={{
+        ...state,
+        projects,
+        activeProject,
+        setActiveProject,
+        refreshProjects,
+        refreshBoard,
+        totalTasks,
+        user,
+        refreshUser,
+      }}
+    >
       {children}
     </BoardContext.Provider>
   )

@@ -27,6 +27,10 @@ class Settings(BaseSettings):
     main_branch: str = "main"
     auto_push: bool = False
 
+    # GitHub OAuth
+    github_client_id: str = ""
+    github_client_secret: str = ""
+
     # Paths (derived from project_dir)
     @property
     def vibe_dir(self) -> Path:

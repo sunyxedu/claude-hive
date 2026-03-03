@@ -10,12 +10,16 @@ from fastapi.staticfiles import StaticFiles
 from manager.config import settings
 from manager.database import init_db, close_db
 from manager.services.worker_orchestrator import orchestrator
+from manager.services.project_service import ensure_default_project
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
     await init_db(settings.db_path)
+    await ensure_default_project(
+        settings.project_dir, settings.project_name, settings.main_branch,
+    )
     await orchestrator.start()
     yield
     # Shutdown
@@ -31,8 +35,10 @@ app = FastAPI(
 )
 
 # Routers (imported here to avoid circular imports)
-from manager.routers import tasks, workers, stream, system  # noqa: E402
+from manager.routers import tasks, workers, stream, system, projects, auth  # noqa: E402
 
+app.include_router(auth.router, prefix="/api")
+app.include_router(projects.router, prefix="/api")
 app.include_router(tasks.router, prefix="/api")
 app.include_router(workers.router, prefix="/api")
 app.include_router(stream.router, prefix="/api")

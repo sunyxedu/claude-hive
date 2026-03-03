@@ -26,9 +26,9 @@ async def run_git(*args: str, cwd: Path | None = None) -> tuple[int, str, str]:
     return proc.returncode, stdout.decode().strip(), stderr.decode().strip()
 
 
-async def ensure_repo() -> bool:
-    """Verify project_dir is a git repository."""
-    rc, _, _ = await run_git("rev-parse", "--git-dir")
+async def ensure_repo(project_dir: Path | None = None) -> bool:
+    """Verify a directory is a git repository."""
+    rc, _, _ = await run_git("rev-parse", "--git-dir", cwd=project_dir)
     return rc == 0
 
 
@@ -54,9 +54,10 @@ async def delete_branch(branch_name: str) -> bool:
     return rc == 0
 
 
-async def fetch_main() -> bool:
+async def fetch_main(project_dir: Path | None = None, main_branch: str | None = None) -> bool:
     """Fetch latest main if remote exists."""
-    rc, _, _ = await run_git("fetch", "origin", settings.main_branch)
+    branch = main_branch or settings.main_branch
+    rc, _, _ = await run_git("fetch", "origin", branch, cwd=project_dir)
     return rc == 0
 
 
@@ -71,9 +72,10 @@ async def commit_all(message: str, cwd: Path | None = None) -> str | None:
     return sha
 
 
-async def rebase_onto_main(cwd: Path) -> tuple[bool, str]:
+async def rebase_onto_main(cwd: Path, main_branch: str | None = None) -> tuple[bool, str]:
     """Rebase current branch onto main. Returns (success, output)."""
-    rc, out, err = await run_git("rebase", settings.main_branch, cwd=cwd)
+    branch = main_branch or settings.main_branch
+    rc, out, err = await run_git("rebase", branch, cwd=cwd)
     if rc != 0:
         # Abort the failed rebase
         await run_git("rebase", "--abort", cwd=cwd)
@@ -81,34 +83,43 @@ async def rebase_onto_main(cwd: Path) -> tuple[bool, str]:
     return True, out
 
 
-async def merge_to_main(worktree_path: Path, branch_name: str) -> tuple[bool, str]:
+async def merge_to_main(
+    worktree_path: Path,
+    branch_name: str,
+    project_dir: Path | None = None,
+    main_branch: str | None = None,
+) -> tuple[bool, str]:
     """
     Merge branch into main using fast-forward.
     Serialized via asyncio.Lock to prevent concurrent main modifications.
     """
+    repo_dir = project_dir or settings.project_dir
+    branch = main_branch or settings.main_branch
+
     async with _merge_lock:
-        # Checkout main in the main repo
-        rc, _, err = await run_git("checkout", settings.main_branch)
+        # Checkout main in the project repo
+        rc, _, err = await run_git("checkout", branch, cwd=repo_dir)
         if rc != 0:
             return False, f"Failed to checkout main: {err}"
 
         # Fast-forward merge
-        rc, out, err = await run_git("merge", "--ff-only", branch_name)
+        rc, out, err = await run_git("merge", "--ff-only", branch_name, cwd=repo_dir)
         if rc != 0:
             return False, f"Fast-forward merge failed: {err}"
 
         # Push if auto_push enabled
         if settings.auto_push:
-            rc, _, err = await run_git("push", "origin", settings.main_branch)
+            rc, _, err = await run_git("push", "origin", branch, cwd=repo_dir)
             if rc != 0:
                 log.warning("Push failed: %s", err)
 
         return True, out
 
 
-async def write_progress(task_title: str, summary: str):
-    """Append lesson to PROGRESS.md in the main repo (via git -C)."""
-    progress_path = settings.project_dir / "PROGRESS.md"
+async def write_progress(task_title: str, summary: str, project_dir: Path | None = None):
+    """Append lesson to PROGRESS.md in the project repo."""
+    repo_dir = project_dir or settings.project_dir
+    progress_path = repo_dir / "PROGRESS.md"
     entry = f"\n## {task_title}\n\n{summary}\n"
     try:
         if progress_path.exists():

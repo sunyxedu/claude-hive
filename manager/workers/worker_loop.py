@@ -3,6 +3,7 @@
 import asyncio
 import logging
 from datetime import datetime
+from pathlib import Path
 
 from manager.database import get_db
 from manager.event_bus import bus
@@ -14,10 +15,21 @@ from manager.workers.worktree_setup import create_worktree, cleanup_worktree
 from manager.workers.merge_strategy import handle_rebase_failure
 from manager.workers.test_runner import run_tests
 from manager.services.task_service import add_task_log, update_task
+from manager.services import project_service
 
 from manager.models import TaskUpdate, TaskStatus
 
 log = logging.getLogger(__name__)
+
+
+async def _get_project_info(task: dict) -> tuple[Path | None, str | None]:
+    """Get project_dir and main_branch for a task's project."""
+    project_id = task.get("project_id")
+    if project_id:
+        project = await project_service.get_project(project_id)
+        if project:
+            return Path(project["path"]), project["main_branch"]
+    return None, None
 
 
 async def claim_task(worker_id: int) -> dict | None:
@@ -100,13 +112,26 @@ async def worker_loop(worker_id: int, stop_event: asyncio.Event):
         task_id = task["id"]
         branch_name = f"hive/task-{task_id}"
 
+        # Resolve project-specific paths
+        project_dir, main_branch = await _get_project_info(task)
+
         try:
             await update_worker_status(worker_id, "busy", task_id)
             await add_task_log(task_id, "claimed", f"Claimed by worker {worker_id}", worker_id)
 
+            # Verify the project repo exists
+            if project_dir and not await ensure_repo(project_dir):
+                await set_task_status(task_id, "failed",
+                                     error_message=f"Project directory is not a git repo: {project_dir}")
+                continue
+
             # 1. Create worktree
             await add_task_log(task_id, "worktree", "Creating worktree...", worker_id)
-            worktree_path = await create_worktree(branch_name)
+            worktree_path = await create_worktree(
+                branch_name,
+                project_dir=project_dir,
+                main_branch=main_branch,
+            )
             if not worktree_path:
                 await set_task_status(task_id, "failed", error_message="Failed to create worktree")
                 continue
@@ -134,7 +159,7 @@ async def worker_loop(worker_id: int, stop_event: asyncio.Event):
             if not result.success:
                 await set_task_status(task_id, "failed", error_message=result.error)
                 await add_task_log(task_id, "claude_failed", result.error, worker_id)
-                await cleanup_worktree(branch_name, worktree_path)
+                await cleanup_worktree(branch_name, worktree_path, project_dir=project_dir)
                 continue
 
             await add_task_log(task_id, "claude_done", "Claude completed successfully", worker_id)
@@ -147,14 +172,14 @@ async def worker_loop(worker_id: int, stop_event: asyncio.Event):
             # 4. Rebase onto latest main
             await set_task_status(task_id, "merging")
             await add_task_log(task_id, "rebase", "Rebasing onto main...", worker_id)
-            await fetch_main()
-            ok, msg = await rebase_onto_main(worktree_path)
+            await fetch_main(project_dir=project_dir, main_branch=main_branch)
+            ok, msg = await rebase_onto_main(worktree_path, main_branch=main_branch)
 
             if not ok:
                 await add_task_log(task_id, "rebase_failed", msg, worker_id)
                 ok = await handle_rebase_failure(task_id, task, worktree_path, branch_name, worker_id)
                 if not ok:
-                    await cleanup_worktree(branch_name, worktree_path)
+                    await cleanup_worktree(branch_name, worktree_path, project_dir=project_dir)
                     continue
 
             # 5. Run tests
@@ -166,19 +191,23 @@ async def worker_loop(worker_id: int, stop_event: asyncio.Event):
                 await add_task_log(task_id, "test_failed", test_output, worker_id)
                 await set_task_status(task_id, "failed",
                                      error_message=f"Tests failed: {test_output[:200]}")
-                await cleanup_worktree(branch_name, worktree_path)
+                await cleanup_worktree(branch_name, worktree_path, project_dir=project_dir)
                 continue
 
             await add_task_log(task_id, "test_passed", "Tests passed", worker_id)
 
             # 6. Merge to main
             await add_task_log(task_id, "merge", "Merging to main...", worker_id)
-            merge_ok, merge_msg = await merge_to_main(worktree_path, branch_name)
+            merge_ok, merge_msg = await merge_to_main(
+                worktree_path, branch_name,
+                project_dir=project_dir,
+                main_branch=main_branch,
+            )
 
             if not merge_ok:
                 await set_task_status(task_id, "failed", error_message=merge_msg)
                 await add_task_log(task_id, "merge_failed", merge_msg, worker_id)
-                await cleanup_worktree(branch_name, worktree_path)
+                await cleanup_worktree(branch_name, worktree_path, project_dir=project_dir)
                 continue
 
             # 7. Complete
@@ -200,17 +229,21 @@ async def worker_loop(worker_id: int, stop_event: asyncio.Event):
             await db.commit()
 
             # 8. Write progress
-            await write_progress(task["title"], result.result_text[:500] if result.result_text else "Completed.")
+            await write_progress(
+                task["title"],
+                result.result_text[:500] if result.result_text else "Completed.",
+                project_dir=project_dir,
+            )
 
             # 9. Cleanup
-            await cleanup_worktree(branch_name, worktree_path)
+            await cleanup_worktree(branch_name, worktree_path, project_dir=project_dir)
 
         except Exception as e:
             log.exception("Worker %d error on task %d", worker_id, task_id)
             await set_task_status(task_id, "failed", error_message=str(e)[:500])
             await add_task_log(task_id, "error", str(e), worker_id)
             try:
-                await cleanup_worktree(branch_name)
+                await cleanup_worktree(branch_name, project_dir=project_dir)
             except Exception:
                 pass
 

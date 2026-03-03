@@ -8,9 +8,10 @@ from manager.models import TaskCreate, TaskUpdate, TaskStatus
 async def create_task(data: TaskCreate) -> dict:
     db = get_db()
     cursor = await db.execute(
-        """INSERT INTO tasks (title, description, priority, plan_mode, max_retries)
-           VALUES (?, ?, ?, ?, ?) RETURNING *""",
-        (data.title, data.description, data.priority, int(data.plan_mode), data.max_retries),
+        """INSERT INTO tasks (project_id, title, description, priority, plan_mode, max_retries)
+           VALUES (?, ?, ?, ?, ?, ?) RETURNING *""",
+        (data.project_id, data.title, data.description, data.priority,
+         int(data.plan_mode), data.max_retries),
     )
     row = await cursor.fetchone()
     await db.commit()
@@ -19,14 +20,21 @@ async def create_task(data: TaskCreate) -> dict:
     return task
 
 
-async def list_tasks(status: str | None = None) -> list[dict]:
+async def list_tasks(status: str | None = None, project_id: int | None = None) -> list[dict]:
     db = get_db()
+    conditions = []
+    params: list = []
     if status:
-        cursor = await db.execute(
-            "SELECT * FROM tasks WHERE status = ? ORDER BY priority DESC, id ASC", (status,)
-        )
-    else:
-        cursor = await db.execute("SELECT * FROM tasks ORDER BY priority DESC, id ASC")
+        conditions.append("status = ?")
+        params.append(status)
+    if project_id is not None:
+        conditions.append("project_id = ?")
+        params.append(project_id)
+
+    where = (" WHERE " + " AND ".join(conditions)) if conditions else ""
+    cursor = await db.execute(
+        f"SELECT * FROM tasks{where} ORDER BY priority DESC, id ASC", params
+    )
     rows = await cursor.fetchall()
     return [dict(r) for r in rows]
 
@@ -70,9 +78,9 @@ async def delete_task(task_id: int) -> bool:
     return False
 
 
-async def get_board() -> dict:
+async def get_board(project_id: int | None = None) -> dict:
     """Get all tasks grouped by status for kanban board."""
-    tasks = await list_tasks()
+    tasks = await list_tasks(project_id=project_id)
     board: dict[str, list] = {s.value: [] for s in TaskStatus}
     for t in tasks:
         board[t["status"]].append(t)

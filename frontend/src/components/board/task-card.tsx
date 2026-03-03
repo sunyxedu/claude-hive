@@ -53,7 +53,7 @@ export function TaskCard({ task }: TaskCardProps) {
 
   return (
     <>
-      <Card className="p-0 overflow-hidden border bg-card shadow-sm hover:shadow-md transition-shadow rounded-xl">
+      <Card className="p-0 overflow-hidden border-border/50 bg-card hover:border-primary/30 transition-all duration-200 rounded-xl hover:shadow-lg hover:shadow-primary/5 group">
         {/* Header row */}
         <div className="flex items-center justify-between px-3 pt-3 pb-1">
           <div className="flex items-center gap-2 min-w-0">
@@ -63,16 +63,19 @@ export function TaskCard({ task }: TaskCardProps) {
               {task.id}
             </span>
             {task.plan_mode && (
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0">
+              <Badge
+                variant="outline"
+                className="text-[10px] px-1.5 py-0 shrink-0 border-primary/30 text-primary"
+              >
                 Plan
               </Badge>
             )}
           </div>
-          <div className="flex items-center gap-0.5 shrink-0">
+          <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6"
+              className="h-6 w-6 text-muted-foreground hover:text-foreground"
               onClick={() => setDetailOpen(true)}
             >
               <Maximize2 className="w-3 h-3" />
@@ -81,7 +84,7 @@ export function TaskCard({ task }: TaskCardProps) {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6"
+                className="h-6 w-6 text-muted-foreground hover:text-foreground"
                 onClick={() => setExpanded(!expanded)}
               >
                 {expanded ? (
@@ -99,24 +102,26 @@ export function TaskCard({ task }: TaskCardProps) {
           className="px-3 pb-2 cursor-pointer"
           onClick={() => setDetailOpen(true)}
         >
-          <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+          <p className="text-sm leading-relaxed whitespace-pre-wrap break-words text-foreground/90">
             {displayText}
-            {truncated && !expanded && "..."}
+            {truncated && !expanded && (
+              <span className="text-muted-foreground">...</span>
+            )}
           </p>
         </div>
 
         {/* Footer */}
         <div className="px-3 pb-3 flex items-center justify-between">
-          <span className="text-[11px] text-muted-foreground">
+          <span className="text-[11px] text-muted-foreground/70">
             {statusLabel ? `${statusLabel}: ` : ""}
             {formatRelativeTime(timestamp)}
           </span>
           {task.status === "failed" && (
-            <div className="flex gap-1">
+            <div className="flex gap-0.5">
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6 text-muted-foreground hover:text-primary"
+                className="h-6 w-6 text-muted-foreground hover:text-blue-400"
                 onClick={handleRetry}
               >
                 <RotateCcw className="w-3.5 h-3.5" />
@@ -124,7 +129,7 @@ export function TaskCard({ task }: TaskCardProps) {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                className="h-6 w-6 text-muted-foreground hover:text-red-400"
                 onClick={handleDelete}
               >
                 <Trash2 className="w-3.5 h-3.5" />

@@ -6,8 +6,17 @@ from pathlib import Path
 _db: aiosqlite.Connection | None = None
 
 SCHEMA = """
+CREATE TABLE IF NOT EXISTS projects (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    name        TEXT    NOT NULL,
+    path        TEXT    NOT NULL UNIQUE,
+    main_branch TEXT    NOT NULL DEFAULT 'main',
+    created_at  TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS tasks (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id      INTEGER REFERENCES projects(id),
     title           TEXT    NOT NULL,
     description     TEXT    NOT NULL DEFAULT '',
     status          TEXT    NOT NULL DEFAULT 'pending',
@@ -66,7 +75,31 @@ CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
 CREATE INDEX IF NOT EXISTS idx_tasks_priority ON tasks(priority DESC, id ASC);
 CREATE INDEX IF NOT EXISTS idx_task_logs_task ON task_logs(task_id);
 CREATE INDEX IF NOT EXISTS idx_workers_status ON workers(status);
+
+CREATE TABLE IF NOT EXISTS github_auth (
+    id              INTEGER PRIMARY KEY,
+    github_user_id  TEXT NOT NULL,
+    github_username TEXT NOT NULL,
+    github_avatar   TEXT NOT NULL DEFAULT '',
+    access_token    TEXT NOT NULL,
+    created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
 """
+
+
+async def _migrate(db: aiosqlite.Connection):
+    """Run migrations for existing databases."""
+    # Check if tasks table has project_id column
+    cursor = await db.execute("PRAGMA table_info(tasks)")
+    columns = [row[1] for row in await cursor.fetchall()]
+    if "project_id" not in columns:
+        await db.execute(
+            "ALTER TABLE tasks ADD COLUMN project_id INTEGER REFERENCES projects(id)"
+        )
+        await db.execute(
+            "CREATE INDEX IF NOT EXISTS idx_tasks_project ON tasks(project_id)"
+        )
+        await db.commit()
 
 
 async def init_db(db_path: Path) -> aiosqlite.Connection:
@@ -79,6 +112,7 @@ async def init_db(db_path: Path) -> aiosqlite.Connection:
     await _db.execute("PRAGMA foreign_keys=ON")
     await _db.executescript(SCHEMA)
     await _db.commit()
+    await _migrate(_db)
     return _db
 
 

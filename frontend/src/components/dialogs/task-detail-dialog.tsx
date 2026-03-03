@@ -38,13 +38,13 @@ export function TaskDetailDialog({ taskId, open, onOpenChange }: TaskDetailDialo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[580px] max-h-[85vh] overflow-hidden flex flex-col">
+      <DialogContent className="sm:max-w-[580px] max-h-[85vh] overflow-hidden flex flex-col border-border/50 bg-card">
         {loading || !task ? (
           <div className="space-y-3 py-4">
-            <Skeleton className="h-6 w-48" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-32 w-full" />
+            <Skeleton className="h-6 w-48 bg-muted/50" />
+            <Skeleton className="h-4 w-full bg-muted/50" />
+            <Skeleton className="h-4 w-full bg-muted/50" />
+            <Skeleton className="h-32 w-full bg-muted/50" />
           </div>
         ) : (
           <>
@@ -53,11 +53,13 @@ export function TaskDetailDialog({ taskId, open, onOpenChange }: TaskDetailDialo
                 <span className={`text-xs font-bold px-2 py-0.5 rounded-md ${getIdColor(task.id)}`}>
                   {task.id}
                 </span>
-                <Badge variant="secondary" className="text-xs">
+                <Badge variant="secondary" className="text-xs bg-secondary/80">
                   {task.status.replace("_", " ")}
                 </Badge>
                 {task.plan_mode && (
-                  <Badge variant="outline" className="text-xs">Plan</Badge>
+                  <Badge variant="outline" className="text-xs border-primary/30 text-primary">
+                    Plan
+                  </Badge>
                 )}
               </div>
               <DialogTitle className="pr-6">{task.title}</DialogTitle>
@@ -77,29 +79,29 @@ export function TaskDetailDialog({ taskId, open, onOpenChange }: TaskDetailDialo
             </div>
 
             {task.description && (
-              <p className="text-sm mt-3 whitespace-pre-wrap text-muted-foreground bg-muted rounded-lg p-3">
+              <p className="text-sm mt-3 whitespace-pre-wrap text-muted-foreground bg-muted/50 rounded-lg p-3 border border-border/30">
                 {task.description}
               </p>
             )}
 
             {task.error_message && (
-              <p className="text-sm mt-2 text-destructive bg-red-50 rounded-lg p-3">
+              <p className="text-sm mt-2 text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg p-3">
                 {task.error_message}
               </p>
             )}
 
-            <Separator className="my-3" />
+            <Separator className="my-3 bg-border/50" />
 
             <h4 className="text-sm font-semibold mb-1.5">Logs</h4>
             <ScrollArea className="flex-1 min-h-0 max-h-[300px]">
-              <div className="bg-muted rounded-lg p-3 font-mono text-xs space-y-0.5">
+              <div className="bg-muted/40 rounded-lg p-3 font-mono text-xs space-y-0.5 border border-border/30">
                 {logs.length === 0 ? (
-                  <div className="text-muted-foreground">No logs yet</div>
+                  <div className="text-muted-foreground/50">No logs yet</div>
                 ) : (
                   logs.map((l) => (
-                    <div key={l.id} className="py-0.5 border-b border-border last:border-0">
-                      <span className="text-muted-foreground">[{l.event_type}]</span>{" "}
-                      {l.message}
+                    <div key={l.id} className="py-0.5 border-b border-border/20 last:border-0">
+                      <span className="text-primary/70">[{l.event_type}]</span>{" "}
+                      <span className="text-foreground/80">{l.message}</span>
                     </div>
                   ))
                 )}
@@ -116,7 +118,7 @@ function DetailRow({ label, children }: { label: string; children: React.ReactNo
   return (
     <>
       <span className="text-muted-foreground">{label}</span>
-      <span>{children}</span>
+      <span className="text-foreground/90">{children}</span>
     </>
   )
 }

@@ -25,6 +25,22 @@ class WorkerStatus(str, Enum):
     dead = "dead"
 
 
+# --- Project ---
+
+class ProjectCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    path: str = Field(min_length=1)
+    main_branch: str = Field(default="main", max_length=100)
+
+
+class ProjectOut(BaseModel):
+    id: int
+    name: str
+    path: str
+    main_branch: str
+    created_at: str
+
+
 # --- Task ---
 
 class TaskCreate(BaseModel):
@@ -33,6 +49,7 @@ class TaskCreate(BaseModel):
     priority: int = Field(default=0, ge=0, le=10)
     plan_mode: bool = True
     max_retries: int = Field(default=3, ge=0, le=10)
+    project_id: int | None = None
 
 
 class TaskUpdate(BaseModel):
@@ -46,6 +63,7 @@ class TaskUpdate(BaseModel):
 
 class TaskOut(BaseModel):
     id: int
+    project_id: int | None
     title: str
     description: str
     status: TaskStatus
@@ -91,6 +109,30 @@ class TaskLogOut(BaseModel):
     message: str
     details: str | None
     created_at: str
+
+
+# --- Stats ---
+
+# --- GitHub ---
+
+class GitHubUser(BaseModel):
+    github_username: str
+    github_avatar: str
+    logged_in: bool = True
+
+
+class RepoInfo(BaseModel):
+    full_name: str
+    name: str
+    description: str | None
+    private: bool
+    default_branch: str
+    html_url: str
+
+
+class CloneRequest(BaseModel):
+    full_name: str
+    branch: str = ""
 
 
 # --- Stats ---

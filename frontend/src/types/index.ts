@@ -10,12 +10,31 @@ export type TaskStatus =
 
 export type WorkerStatus = "idle" | "busy" | "starting" | "stopping" | "dead"
 
+// --- Project ---
+
+export interface ProjectCreate {
+  name: string
+  path: string
+  main_branch?: string
+}
+
+export interface ProjectOut {
+  id: number
+  name: string
+  path: string
+  main_branch: string
+  created_at: string
+}
+
+// --- Task ---
+
 export interface TaskCreate {
   title: string
   description?: string
   priority?: number
   plan_mode?: boolean
   max_retries?: number
+  project_id?: number | null
 }
 
 export interface TaskUpdate {
@@ -29,6 +48,7 @@ export interface TaskUpdate {
 
 export interface TaskOut {
   id: number
+  project_id: number | null
   title: string
   description: string
   status: TaskStatus
@@ -49,6 +69,8 @@ export interface TaskOut {
   tokens_output: number
   cost_usd: number
 }
+
+// --- Worker ---
 
 export interface WorkerOut {
   id: number
@@ -91,3 +113,20 @@ export interface ProjectConfig {
 }
 
 export type BoardData = Partial<Record<TaskStatus, TaskOut[]>>
+
+// --- GitHub ---
+
+export interface GitHubUser {
+  github_username: string
+  github_avatar: string
+  logged_in: boolean
+}
+
+export interface RepoInfo {
+  full_name: string
+  name: string
+  description: string | null
+  private: boolean
+  default_branch: string
+  html_url: string
+}

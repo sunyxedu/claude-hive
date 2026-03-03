@@ -4,10 +4,12 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Mic, MicOff } from "lucide-react"
 import { useVoiceInput } from "@/hooks/use-voice-input"
+import { useBoardContext } from "@/context/board-context"
 import * as api from "@/lib/api"
 import { toast } from "sonner"
 
 export function TaskInput() {
+  const { activeProject } = useBoardContext()
   const [value, setValue] = useState("")
   const [planMode, setPlanMode] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -35,6 +37,7 @@ export function TaskInput() {
         description,
         priority: 5,
         plan_mode: planMode,
+        project_id: activeProject?.id ?? null,
       })
       setValue("")
       toast.success("Task created")
@@ -56,7 +59,7 @@ export function TaskInput() {
 
   return (
     <div className="px-6 py-4">
-      <div className="border rounded-xl bg-card p-4 shadow-sm">
+      <div className="border border-border/60 rounded-xl bg-card/80 backdrop-blur-sm p-4 shadow-lg shadow-black/20 focus-within:border-primary/30 focus-within:glow-primary transition-all duration-300">
         <div className="flex gap-3">
           <textarea
             ref={textareaRef}
@@ -65,7 +68,7 @@ export function TaskInput() {
             onKeyDown={handleKeyDown}
             placeholder="Add new task... (Cmd/Ctrl+Enter to submit)"
             rows={2}
-            className="flex-1 resize-none bg-transparent text-sm outline-none placeholder:text-muted-foreground min-h-[56px]"
+            className="flex-1 resize-none bg-transparent text-sm outline-none placeholder:text-muted-foreground/60 min-h-[56px]"
           />
           <div className="flex flex-col gap-2">
             {available && (
@@ -74,7 +77,11 @@ export function TaskInput() {
                 variant="outline"
                 size="icon"
                 onClick={toggle}
-                className={active ? "bg-primary text-primary-foreground" : ""}
+                className={
+                  active
+                    ? "bg-primary text-primary-foreground border-primary glow-primary"
+                    : "border-border/60 hover:border-primary/40 hover:bg-primary/10"
+                }
               >
                 {active ? (
                   <MicOff className="w-4 h-4" />
@@ -86,13 +93,13 @@ export function TaskInput() {
             <Button
               onClick={handleSubmit}
               disabled={submitting || !value.trim()}
-              className="whitespace-nowrap"
+              className="whitespace-nowrap shadow-lg shadow-primary/20"
             >
               {submitting ? "..." : "Add"}
             </Button>
           </div>
         </div>
-        <div className="flex items-center justify-between mt-3 pt-3 border-t">
+        <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/40">
           <div className="flex items-center gap-2">
             <Checkbox
               id="plan-mode-inline"
@@ -106,7 +113,7 @@ export function TaskInput() {
               Plan mode
             </Label>
           </div>
-          <span className="text-[11px] text-muted-foreground hidden sm:block">
+          <span className="text-[11px] text-muted-foreground/60 hidden sm:block">
             Enter for newline, Cmd/Ctrl+Enter to submit
             {available ? " | Click mic for voice input" : ""}
           </span>

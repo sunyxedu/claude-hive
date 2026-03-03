@@ -86,19 +86,33 @@ class WorkerOrchestrator:
         cursor = await db.execute("SELECT * FROM workers ORDER BY id")
         return [dict(r) for r in await cursor.fetchall()]
 
-    async def get_stats(self) -> dict:
+    async def get_stats(self, project_id: int | None = None) -> dict:
         db = get_db()
+        proj_filter = " WHERE project_id = ?" if project_id is not None else ""
+        proj_params: tuple = (project_id,) if project_id is not None else ()
 
-        cursor = await db.execute("SELECT COUNT(*) as c FROM tasks")
+        cursor = await db.execute(f"SELECT COUNT(*) as c FROM tasks{proj_filter}", proj_params)
         total = (await cursor.fetchone())["c"]
 
-        cursor = await db.execute("SELECT COUNT(*) as c FROM tasks WHERE status = 'pending'")
+        cursor = await db.execute(
+            f"SELECT COUNT(*) as c FROM tasks WHERE status = 'pending'"
+            + (" AND project_id = ?" if project_id is not None else ""),
+            proj_params,
+        )
         pending = (await cursor.fetchone())["c"]
 
-        cursor = await db.execute("SELECT COUNT(*) as c FROM tasks WHERE status = 'completed'")
+        cursor = await db.execute(
+            f"SELECT COUNT(*) as c FROM tasks WHERE status = 'completed'"
+            + (" AND project_id = ?" if project_id is not None else ""),
+            proj_params,
+        )
         completed = (await cursor.fetchone())["c"]
 
-        cursor = await db.execute("SELECT COUNT(*) as c FROM tasks WHERE status = 'failed'")
+        cursor = await db.execute(
+            f"SELECT COUNT(*) as c FROM tasks WHERE status = 'failed'"
+            + (" AND project_id = ?" if project_id is not None else ""),
+            proj_params,
+        )
         failed = (await cursor.fetchone())["c"]
 
         cursor = await db.execute("SELECT COUNT(*) as c FROM workers WHERE status = 'busy'")
@@ -107,7 +121,8 @@ class WorkerOrchestrator:
         cursor = await db.execute(
             "SELECT COALESCE(SUM(cost_usd), 0) as c, "
             "COALESCE(SUM(tokens_input), 0) as ti, "
-            "COALESCE(SUM(tokens_output), 0) as to_ FROM tasks"
+            f"COALESCE(SUM(tokens_output), 0) as to_ FROM tasks{proj_filter}",
+            proj_params,
         )
         row = await cursor.fetchone()
 
